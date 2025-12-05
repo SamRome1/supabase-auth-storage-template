@@ -68,10 +68,9 @@ export default function Home() {
         {!user ? (
           <AuthForm />
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-8 flex flex-col items-center">
             <UploadImage userId={user.id} onImageUploaded={() => setRefreshFeed(!refreshFeed)} />
-            <div>
-              <h2 className="text-2xl font-bold mb-4">Community Gallery</h2>
+            <div className="w-full">
               <ImageFeed key={refreshFeed ? 'refresh' : 'no-refresh'} />
             </div>
           </div>

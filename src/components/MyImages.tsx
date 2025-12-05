@@ -8,12 +8,15 @@ interface ImageItem {
   id: string;
   file_path: string;
   file_name: string;
-  caption: string | null;
   created_at: string;
   user_id: string;
 }
 
-export default function ImageFeed() {
+interface MyImagesProps {
+  userId: string;
+}
+
+export default function MyImages({ userId }: MyImagesProps) {
   const [images, setImages] = useState<ImageItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -23,6 +26,7 @@ export default function ImageFeed() {
         const { data, error } = await supabase
           .from('images')
           .select('*')
+          .eq('user_id', userId)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -38,10 +42,15 @@ export default function ImageFeed() {
 
     // Subscribe to real-time updates
     const subscription = supabase
-      .channel('images')
+      .channel(`my-images-${userId}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'images' },
+        {
+          event: '*',
+          schema: 'public',
+          table: 'images',
+          filter: `user_id=eq.${userId}`,
+        },
         () => {
           fetchImages();
         }
@@ -51,40 +60,30 @@ export default function ImageFeed() {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [userId]);
 
-  if (loading) return <div className="text-center py-8">Loading images...</div>;
+  if (loading) return <div className="text-center py-8">Loading your images...</div>;
 
   if (images.length === 0) {
-    return <div className="text-center py-12 text-gray-500">No images yet. Be the first to upload!</div>;
+    return <div className="text-center py-8 text-gray-500">No images uploaded yet</div>;
   }
 
   return (
-    <div className="flex flex-col items-center gap-8 pb-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {images.map((image) => (
-        <div key={image.id} className="w-full max-w-md bg-white rounded-lg shadow overflow-hidden">
-          <div className="relative w-full aspect-square bg-gray-100">
+        <div key={image.id} className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="relative w-full aspect-square">
             <Image
               src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/images/${image.file_path}`}
               alt={image.file_name}
               fill
               className="object-cover"
-              priority={false}
             />
           </div>
           <div className="p-4">
-            {image.caption && (
-              <p className="text-sm mb-2">{image.caption}</p>
-            )}
-            <p className="font-semibold text-sm text-gray-600">{image.file_name}</p>
+            <p className="font-semibold text-sm truncate">{image.file_name}</p>
             <p className="text-xs text-gray-400">
-              {new Date(image.created_at).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
+              {new Date(image.created_at).toLocaleDateString()}
             </p>
           </div>
         </div>
